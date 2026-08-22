@@ -1,0 +1,57 @@
+{
+  "name": "librocat",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/librocat/librocat.git"
+  },
+  "version": "0.1.1",
+  "mcpName": "io.github.librocat/librocat",
+  "description": "Persistent AI memory, shipped as an Agent Plugin. This package is the librocat MCP server: your notes and knowledge as Open Knowledge Format (OKF) Markdown files on your machine, cataloged with library and information science, retrieved by any agent. Install the whole plugin (server + Agent Skills) with `npx plugins add librocat/librocat`. Offline. Zero dependencies.",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "ai-memory",
+    "memory",
+    "okf",
+    "open-knowledge-format",
+    "library-science",
+    "knowledge-management",
+    "notes",
+    "markdown",
+    "agent-plugin",
+    "agent",
+    "claude-code",
+    "cursor",
+    "codex"
+  ],
+  "author": "Laughing Hermit, Inc. <hello@librocat.dev>",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "librocat": "dist/main.js"
+  },
+  "exports": {
+    "./tools": "./src/tools.ts"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/main.js --banner:js=\"#!/usr/bin/env node\nimport { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@librocat/core": "workspace:*",
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.28.2",
+    "zod": "^4.4.3"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.turbo/
+.librocat/
+.env
+.env.local
+.DS_Store

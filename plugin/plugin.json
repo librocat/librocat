@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "librocat",
+  "version": "0.1.1",
+  "description": "An Agent Plugin for persistent AI memory over MCP: notes and knowledge as Open Knowledge Format (OKF) Markdown, cataloged with library and information science. Contains the librocat MCP server and Agent Skills.",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/librocat/librocat",
+  "keywords": [
+    "mcp",
+    "okf",
+    "library",
+    "library-science",
+    "memory",
+    "ai-memory",
+    "notes",
+    "agent-plugin",
+    "agent"
+  ]
+}

@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+
+# pnpm runs no install scripts unless the package is listed here. esbuild's
+# postinstall only swaps its JS shim for the raw binary, which breaks pnpm's
+# shim, so it stays off.
+allowBuilds:
+  esbuild: false

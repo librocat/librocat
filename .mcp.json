@@ -1,0 +1,13 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "librocat": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "librocat"],
+      "env": {
+        "LIBROCAT_BUNDLE": "${PLUGIN_DATA}/okf"
+      }
+    }
+  }
+}
