@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.2.0",
     "turbo": "^2.10.11",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
