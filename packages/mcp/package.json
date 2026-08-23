@@ -1,0 +1,27 @@
+{
+  "name": "@librocat/server",
+  "private": true,
+  "version": "0.1.2",
+  "description": "The librocat MCP server (internal). The built bundle ships inside the Agent Plugin repo as server/main.js. The npm package `librocat` is a pointer with no code.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    "./tools": "./src/tools.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/main.js --banner:js=\"#!/usr/bin/env node\nimport { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@librocat/core": "workspace:*",
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.28.2",
+    "zod": "^4.4.3"
+  }
+}
