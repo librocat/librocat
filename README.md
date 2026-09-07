@@ -1,5 +1,7 @@
 # librocat
 
+![CI](https://github.com/librocat/librocat/actions/workflows/ci.yml/badge.svg)
+
 **Persistent AI memory, shipped as an Agent Plugin.** Your AI agents forget
 everything when a session ends, so you repeat yourself every day, to every
 one of them. librocat catalogs your notes and files as Open Knowledge Format
