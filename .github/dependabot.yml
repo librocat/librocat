@@ -7,6 +7,10 @@ updates:
     groups:
       all:
         patterns: ["*"]
+    ignore:
+      # held on 24.x on purpose: matches the Node 24 pinned in this repo's own CI.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
