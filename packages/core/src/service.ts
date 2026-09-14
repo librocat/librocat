@@ -43,6 +43,8 @@ export function resolveBundle(bundle?: string): string {
 export class Service {
   readonly bundle: string;
   readonly index: MemoryIndex;
+  /** Files the last reindex skipped (not valid OKF). */
+  private skipped = 0;
 
   private constructor(bundle: string, index: MemoryIndex) {
     this.bundle = bundle;
@@ -155,7 +157,8 @@ export class Service {
     st.bundle = this.bundle;
     const files = fs.existsSync(this.bundle) ? okf.iterConceptFiles(this.bundle).length : 0;
     st.bundle_files = files;
-    st.stale = files !== this.index.count();
+    st.skipped_files = this.skipped;
+    st.stale = files !== this.index.count() + this.skipped;
     return st;
   }
 
@@ -164,10 +167,13 @@ export class Service {
   /** Rebuild the index from the OKF bundle on disk. */
   async reindex(): Promise<{ indexed: number; note?: string }> {
     if (!fs.existsSync(this.bundle)) {
+      this.skipped = 0;
       await this.index.reindex([]);
       return { indexed: 0, note: `bundle ${this.bundle} does not exist yet` };
     }
-    return this.index.reindex(okf.loadBundle(this.bundle));
+    const concepts = okf.loadBundle(this.bundle);
+    this.skipped = okf.iterConceptFiles(this.bundle).length - concepts.length;
+    return this.index.reindex(concepts);
   }
 
   async ingestText(opts: {
