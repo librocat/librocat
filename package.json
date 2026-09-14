@@ -2,7 +2,7 @@
   "name": "librocat-oss",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.22.0",
+  "packageManager": "pnpm@12.4.1",
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
@@ -11,10 +11,10 @@
     "plugin": "node scripts/build-plugin.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.9",
+    "@biomejs/biome": "^2.5.13",
     "@types/node": "^24.0.0",
-    "turbo": "^2.10.11",
+    "turbo": "^2.10.13",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }

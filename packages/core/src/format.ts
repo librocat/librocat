@@ -412,7 +412,7 @@ export function makeSnippet(text: string, query: string, width = 12): string {
   const words = text.split(/\s+/).filter((w) => w.length > 0);
   const isMatch = (word: string): boolean => {
     const lower = word.toLowerCase();
-    return tokens.some((t) => lower.startsWith(t) || lower.includes(t));
+    return tokens.some((t) => lower.includes(t));
   };
   let at = words.findIndex(isMatch);
   if (at === -1) at = 0;
