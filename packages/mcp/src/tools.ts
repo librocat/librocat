@@ -68,6 +68,15 @@ export interface Backend {
   neighbors(id: string): Maybe<unknown>;
   graph(id: string, opts: { depth?: number }): Maybe<unknown>;
   ingestText(opts: ConceptWrite): Maybe<unknown>;
+  /**
+   * Optional: write many concepts in one call. Only the Cloud-mode bridge
+   * implements this (one remote `ingest` request instead of one per
+   * concept); Local and the Cloud backend itself omit it, and the `ingest`
+   * tool falls back to calling `ingestText` once per item.
+   */
+  ingestBatch?(
+    concepts: ConceptWrite[],
+  ): Maybe<{ written: number; results: { ok: boolean; result?: unknown; error?: string }[] }>;
   update(id: string, opts: ConceptPatch): Maybe<unknown>;
   rename(id: string, newId: string): Maybe<unknown>;
   /** Delete one concept (weeding). Inbound links from other concepts become broken links. */
@@ -233,10 +242,12 @@ export function registerTools(server: McpServer, backend: Backend | BackendFacto
     },
     async ({ concepts, ...single }, ctx) => {
       if (concepts) {
+        const b = be(ctx);
+        if (b.ingestBatch) return run(() => b.ingestBatch?.(concepts));
         const results = [];
         for (const c of concepts) {
           try {
-            results.push({ ok: true, result: await be(ctx).ingestText(c) });
+            results.push({ ok: true, result: await b.ingestText(c) });
           } catch (exc) {
             results.push({ ok: false, error: exc instanceof Error ? exc.message : String(exc) });
           }

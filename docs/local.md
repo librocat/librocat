@@ -7,34 +7,33 @@ any model-assisted work.
 
 ## Install and run
 
-The plugin carries its own built server (`server/main.js`); nothing comes
-from npm. To run the server by hand from a clone:
-
-```bash
-export LIBROCAT_BUNDLE=./okf    # your OKF files (commit these to Git)
-node server/main.js             # the same file the plugin's mcp.json runs
-```
-
-To install the whole plugin (MCP + skills) into every agent you have —
-Claude Code, Cursor, Codex, VS Code, OpenClaw, Hermes Agent, and any other
-MCP client that runs on your machine (web agents such as Claude.ai and
-ChatGPT, and sandboxed platforms such as NemoClaw, need the remote MCP, that
-is Cloud) — use the
-[plugins CLI](https://www.npmjs.com/package/plugins) against the public repo
-(any runner works the same way):
+**Recommended:** install the whole plugin (MCP + skills) into every agent
+you have — Claude Code, Cursor, Codex, VS Code, OpenClaw, Hermes Agent, and
+any other MCP client that runs on your machine (web agents such as
+Claude.ai and ChatGPT, and sandboxed platforms such as NemoClaw, need the
+remote MCP, that is Cloud) — with the
+[plugins CLI](https://www.npmjs.com/package/plugins) against the public
+repo (any runner works the same way):
 
 ```bash
 npx plugins add librocat/librocat
 ```
 
-Skills alone: `npx skills add librocat/librocat`
-(the [skills CLI](https://github.com/vercel-labs/skills)).
-
-Until the npm package is published, run from this repo:
+**If your agent doesn't support Agent Plugins yet** but does support
+[Agent Skills](https://agentskills.io) and MCP separately, install both —
+skills alone call tools that don't exist without the server, and the
+server alone works without the cataloging guidance:
 
 ```bash
-pnpm install && pnpm run build
-node packages/mcp/dist/main.js
+npx skills add librocat/librocat    # https://github.com/vercel-labs/skills
+npx -y librocat                     # the server itself; see "Connect an agent" below
+```
+
+To run the server by hand from a clone instead of npm:
+
+```bash
+export LIBROCAT_BUNDLE=./okf    # your OKF files (commit these to Git)
+node server/main.js             # the same file the plugin's mcp.json runs
 ```
 
 ## Connect an agent
@@ -50,6 +49,31 @@ node packages/mcp/dist/main.js
   }
 }
 ```
+
+## Cloud mode: same binary, logged in
+
+The server above is tier-aware. With no token it is what this page
+describes: Local, offline, the OKF bundle on disk. Add a workspace token —
+in the config's `env` as `LIBROCAT_TOKEN`, or by running `librocat login`
+and pasting one in — and the same process becomes the client for
+[librocat Cloud](https://librocat.dev) instead, on its next start. Nothing
+about the install or the MCP config shape changes; the token is the only
+switch. See [librocat.dev](https://librocat.dev) for what changes once
+logged in (the tool surface, quota, automatic indexation); the CLI itself
+is small:
+
+```bash
+librocat login    # paste a token from the dashboard's Connect page
+librocat logout   # back to Local
+librocat whoami   # which tier is active, and why
+librocat push     # upload the local OKF bundle into the logged-in workspace
+```
+
+`push` runs once, when you upgrade: it reads `./okf` (or the directory you
+give it) and writes every concept into the workspace, so a paying user does
+not start from an empty library. Restart your agent after logging in or
+out — most agents cache the tool list at startup, so the switch is
+otherwise invisible until then.
 
 ## Workflow
 

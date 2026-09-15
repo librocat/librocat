@@ -28,15 +28,29 @@ npx plugins add librocat/librocat      # or pnpm dlx / yarn dlx / bunx
 ```
 
 The published OSS repo root is itself an open-plugin (`plugin.json` +
-`mcp.json` + `skills/`), which is what the CLI discovers. Alternatives:
-
-- **MCP server only:** from a clone, `node server/main.js` (the plugin
-  carries its own built server; npm serves no code).
-- **Skills only:** `npx skills add librocat/librocat` (the
-  [skills CLI](https://github.com/vercel-labs/skills)).
+`mcp.json` + `skills/`), which is what the CLI discovers.
 
 The [Agent Plugins standard](https://agent-plugins.org) defines the package
 format, not an installer — installation is client-specific by design.
+
+### If your agent doesn't support Agent Plugins
+
+Agent Plugins is a newer standard than the two it's built from. If your
+agent supports [Agent Skills](https://agentskills.io) (40+ clients) and
+[MCP](https://github.com/modelcontextprotocol/typescript-sdk) but not
+Agent Plugins yet, install both halves separately — **both are required**,
+since the skills instruct the agent to call this server's tools:
+
+```bash
+npx skills add librocat/librocat    # the skills CLI: https://github.com/vercel-labs/skills
+```
+
+```json
+{ "mcpServers": { "librocat": { "command": "npx", "args": ["-y", "librocat"], "env": { "LIBROCAT_BUNDLE": "./okf" } } } }
+```
+
+`librocat` on npm is the server itself (zero dependencies) — `npx -y
+librocat` runs it directly. From a clone instead: `node server/main.js`.
 
 ## Where the knowledge lives
 
@@ -46,11 +60,24 @@ install works and survives plugin updates. For the full flow, set
 `LIBROCAT_BUNDLE` to a directory inside your own Git repo: the
 repo is the source of truth.
 
-## Local vs remote MCP
+## Local vs Cloud
 
-`mcp.json` declares the local stdio server. For the Cloud tier, point the
-client at the hosted remote endpoint instead, with the workspace token from
-the dashboard's Connect page:
+`mcp.json` declares the local stdio server (`server/main.js`, the same
+binary `npx -y librocat` runs). It is tier-aware: with no token it is Local,
+offline; with a workspace token it becomes the Cloud client instead, same
+process, same `mcp.json` entry. The easiest way to switch it: run `npx -y
+librocat login` once in a terminal and paste the token from the dashboard's
+Connect page. That writes `~/.librocat/credentials.json`, which every
+`librocat` binary on the machine reads — including this plugin's bundled
+`server/main.js` — so no edit to `mcp.json` or `${PLUGIN_DATA}` is needed;
+restart the agent and it is Cloud. `npx -y librocat logout` switches back,
+and `npx -y librocat push` uploads an existing local OKF bundle into the
+workspace once, so nothing is lost moving from Local to Cloud.
+
+Prefer setting the token in `mcp.json` explicitly instead (for example to
+scope it to one client): add `"LIBROCAT_TOKEN": "lc_..."` to the server's
+`env`. Or skip the local process entirely and point the client straight at
+the hosted remote endpoint, for clients that speak remote MCP with headers:
 
 ```json
 {
@@ -64,9 +91,12 @@ the dashboard's Connect page:
 }
 ```
 
-The tool surface is the same in both tiers, minus `ingest_repo` and
-`reindex` in Cloud (no filesystem). Cloud adds automatic LLM indexation paid
-with index credits.
+The tool surface is the same across all three, minus `reindex` in Cloud
+(there is no local index to rebuild there). The remote HTTP form above also
+drops `ingest_repo` — Cloud's endpoint has no filesystem — but the stdio
+forms keep it: the local process reads the repo path and writes the result
+into the Cloud workspace. Cloud adds automatic LLM indexation paid with
+index credits.
 
 ## For plugin authors: use librocat as your plugin's memory
 

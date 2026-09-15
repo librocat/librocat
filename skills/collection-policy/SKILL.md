@@ -14,6 +14,11 @@ Libraries write down what they collect so every librarian selects the same
 way. This is that policy for a librocat library. Apply it before `ingest`;
 it is the reason a library stays useful as it grows.
 
+Local and Cloud are the same server logged out or in, not two different
+installs — do not assume which one you are in from context. Where this
+policy says "in Cloud," check first: `status` returns `plan`,
+`max_concepts`, and `index_credits` in Cloud and does not in Local.
+
 ## What belongs (accession)
 
 Accession a concept when it is **durable, decision-bearing, and not

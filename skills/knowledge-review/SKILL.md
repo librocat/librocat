@@ -20,6 +20,12 @@ supersede / retire / merge-tag proposals on a weekly review shelf, and
 `status` reports `review_shelf` (the open count). Point the user at the
 Overview to approve or dismiss them; do not redo that work by hand.
 
+The Local vs Cloud branches below are about which library you are in, not
+which install you have — the same `librocat` server is either tier
+depending on whether it is logged in, so do not assume from context. Run
+`status` first: Cloud's response includes `plan`, `max_concepts`, and
+`index_credits`; Local's does not.
+
 ## Pass 1 — health
 
 1. Run `status` and `weed_report`. Note `concepts`, `links`, `broken_links`,
