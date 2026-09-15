@@ -50,15 +50,18 @@ async function call(client: Client, tool: string, args: Record<string, unknown>)
   return JSON.parse((res.content as { text: string }[])[0]?.text ?? "null");
 }
 
-run("Cloud mode lists 15 tools: no reindex, ingest_repo survives", async () => {
+run("Cloud mode lists 16 tools, matching Local: reindex is a no-op", async () => {
   const client = await connect({
     LIBROCAT_MCP_URL: url as string,
     LIBROCAT_TOKEN: token as string,
   });
   const names = (await client.listTools()).tools.map((t) => t.name).sort();
-  expect(names).not.toContain("reindex");
+  expect(names).toContain("reindex");
   expect(names).toContain("ingest_repo");
-  expect(names.length).toBe(15);
+  expect(names.length).toBe(16);
+  const reindexed = await call(client, "reindex", {});
+  expect(typeof reindexed.indexed).toBe("number");
+  expect(reindexed.note).toContain("no-op");
   await client.close();
 });
 

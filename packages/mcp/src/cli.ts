@@ -20,19 +20,25 @@ import {
 } from "./credentials.ts";
 import type { ConceptWrite } from "./tools.ts";
 
-const PACKAGE_VERSION = "2.0.0";
+const PACKAGE_VERSION = "2.2.0"; // keep in sync with packages/npm/package.json
 
 const HELP = `librocat — persistent AI memory over MCP (Open Knowledge Format)
 
 Usage:
   librocat                    run the MCP server on stdio (what an agent runs)
   librocat login [token]      switch this install to Cloud: paste a workspace
-                               token from librocat.dev -> dashboard -> Connect
+                               token from librocat.dev -> dashboard -> Connect.
+                               If the workspace is empty and a local OKF
+                               bundle exists, offers to push it in the same
+                               step (never touches a workspace that already
+                               has data)
   librocat login --url <url>  log into a non-default endpoint (self-hosted dev)
+  librocat login --yes        skip the push prompt and push automatically
+  librocat login --no-push    skip the push check/prompt entirely
   librocat logout             switch back to Local (forget the stored token)
   librocat whoami             show which tier is active and why
   librocat push [dir]         upload a local OKF bundle (default ./okf) into
-                               the logged-in Cloud workspace
+                               the logged-in Cloud workspace, any time
   librocat --version          print the version
   librocat --help             show this message
 
@@ -60,10 +66,17 @@ async function promptToken(): Promise<string> {
 }
 
 async function login(args: string[]): Promise<void> {
-  let url = DEFAULT_CLOUD_URL;
+  // Consistent with whoami/push: an explicit --url wins, then
+  // LIBROCAT_MCP_URL (mainly for pointing at a local dev stack), then the
+  // real default.
+  let url = process.env.LIBROCAT_MCP_URL || DEFAULT_CLOUD_URL;
+  let autoYes = false;
+  let noPush = false;
   const positional: string[] = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--url") url = args[++i] ?? url;
+    else if (args[i] === "--yes" || args[i] === "-y") autoYes = true;
+    else if (args[i] === "--no-push") noPush = true;
     else positional.push(args[i] as string);
   }
   const token = positional[0] || (await promptToken());
@@ -91,6 +104,35 @@ async function login(args: string[]): Promise<void> {
   writeCredentials({ token, ...(url === DEFAULT_CLOUD_URL ? {} : { url }) });
   const plan = status.plan ? ` (${status.plan})` : "";
   console.log(`Logged in${plan}. This install now talks to Cloud — restart any running agent.`);
+
+  if (noPush) return;
+  // Never touch a workspace that already has data — only offer on a
+  // brand-new, empty one, so a re-login from a second machine (with an
+  // unrelated or stale local bundle lying around) can't silently clobber it.
+  if (Number(status.concepts ?? 0) > 0) return;
+
+  const bundle = process.env.LIBROCAT_BUNDLE || "./okf";
+  const local = loadBundle(bundle).filter((c) => c.id !== THESAURUS_ID);
+  if (local.length === 0) return;
+
+  let doPush = autoYes;
+  if (!doPush && process.stdin.isTTY) {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      const answer = await rl.question(
+        `Found ${local.length} concept(s) in ${bundle} — push them into this new workspace now? [Y/n] `,
+      );
+      doPush = answer.trim() === "" || /^y/i.test(answer.trim());
+    } finally {
+      rl.close();
+    }
+  } else if (!doPush) {
+    console.log(
+      `Found ${local.length} concept(s) in ${bundle}. Run \`librocat push\` to add them, or ` +
+        "`librocat login --yes` next time to push automatically.",
+    );
+  }
+  if (doPush) await pushBundle(bundle, url, cloudBackend(url, token));
 }
 
 function logout(): void {
@@ -120,24 +162,21 @@ async function whoami(): Promise<void> {
   }
 }
 
-/** Read a local OKF bundle and push every concept into the logged-in Cloud workspace. */
-async function push(args: string[]): Promise<void> {
-  const bundle = args[0] || process.env.LIBROCAT_BUNDLE || "./okf";
-  const envToken = process.env.LIBROCAT_TOKEN;
-  const stored = envToken ? null : readCredentials();
-  const token = envToken || stored?.token;
-  if (!token) {
-    console.error("not logged in — run `librocat login` first");
-    process.exitCode = 1;
-    return;
-  }
-  const url = process.env.LIBROCAT_MCP_URL || stored?.url || DEFAULT_CLOUD_URL;
-  const backend = cloudBackend(url, token);
-
+/**
+ * Read a local OKF bundle and push every concept + thesaurus term into a
+ * Cloud workspace, printing its own progress and result lines. Shared by
+ * the `push` command and `login`'s auto-offer into a freshly-empty
+ * workspace. Returns the failure count so a caller can set `exitCode`.
+ */
+async function pushBundle(
+  bundle: string,
+  url: string,
+  backend: ReturnType<typeof cloudBackend>,
+): Promise<{ failed: number }> {
   const concepts = loadBundle(bundle);
   if (concepts.length === 0) {
     console.log(`No concepts found in ${bundle}.`);
-    return;
+    return { failed: 0 };
   }
 
   // The thesaurus concept is Cloud's own reserved id (`ingest` refuses it,
@@ -180,8 +219,23 @@ async function push(args: string[]): Promise<void> {
     for (const [i, r] of result.results.entries()) {
       if (!r.ok) console.log(`  failed: ${writes[i]?.id ?? "(no id)"} — ${r.error}`);
     }
-    process.exitCode = 1;
   }
+  return { failed };
+}
+
+async function push(args: string[]): Promise<void> {
+  const bundle = args[0] || process.env.LIBROCAT_BUNDLE || "./okf";
+  const envToken = process.env.LIBROCAT_TOKEN;
+  const stored = envToken ? null : readCredentials();
+  const token = envToken || stored?.token;
+  if (!token) {
+    console.error("not logged in — run `librocat login` first");
+    process.exitCode = 1;
+    return;
+  }
+  const url = process.env.LIBROCAT_MCP_URL || stored?.url || DEFAULT_CLOUD_URL;
+  const { failed } = await pushBundle(bundle, url, cloudBackend(url, token));
+  if (failed > 0) process.exitCode = 1;
 }
 
 /** Handle a CLI subcommand. Returns true if `argv` named one (and it ran). */

@@ -7,6 +7,72 @@ change a tool argument. A patch version never does.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-15
+
+### Added
+
+- `reindex` now works in Cloud mode too (the `librocat` binary with a
+  token), as a documented no-op — it reports the current concept count and
+  explains that every write already lands in the index immediately, so
+  there is nothing to rebuild. This supersedes 2.1.0's note that `reindex`
+  "does not" survive in Cloud mode: it now does, purely so that path's
+  tool list matches Local's exactly, at sixteen. A direct HTTP connection
+  to Cloud (no local process, no filesystem) still can't offer it —
+  fourteen tools there, unchanged, a structural limit rather than a
+  decision.
+- `librocat login` now offers to push an existing local OKF bundle into
+  the workspace in the same step, when (and only when) the workspace is
+  brand new and empty — closing the gap where `push` was a second command
+  a user had to separately know about. `--yes`/`-y` skips the prompt and
+  pushes automatically; `--no-push` skips the check entirely. A workspace
+  that already has data is never touched, prompted about, or pushed into.
+
+### Fixed
+
+- `login` now falls back to `LIBROCAT_MCP_URL` the same way `whoami` and
+  `push` already did, instead of only accepting an explicit `--url`.
+
+## [2.1.0] - 2026-09-15
+
+### Added
+
+- The `librocat` binary is tier-aware. With no token: unchanged, Local,
+  offline, 16 tools. With a workspace token (`LIBROCAT_TOKEN`, or the new
+  `librocat login`): the same process becomes the client for librocat
+  Cloud instead — every tool call becomes one request to the hosted
+  `/mcp` endpoint, reusing the one tool table this repo already defines.
+  Same install, same MCP config, both tiers.
+- `ingest_repo` survives in Cloud mode: this process still has a
+  filesystem (Cloud's own HTTP endpoint does not), so it reads a local
+  repo and writes the result into the Cloud workspace. `reindex` does
+  not — there is no local index to rebuild against Cloud.
+- New CLI subcommands: `login`, `logout`, `whoami`, `push` (uploads an
+  existing local OKF bundle into the logged-in workspace once, so
+  upgrading from Local does not mean starting from an empty library).
+- `packages/npm` — the actual publish source of this package — is now
+  part of the public repository; previously only `packages/mcp` (its
+  dependency) was, so the published artifact was not reproducible from
+  the repository it names as its `repository`.
+
+### Changed
+
+- "Opens no network connection" (`SECURITY.md`, this package's README)
+  now reads "opens none until you log in" — a token means exactly one
+  HTTPS connection, to the workspace, nowhere else.
+
+## [2.0.0] - 2026-09-14
+
+### Changed
+
+- Reversed the 0.1.2 pointer-package decision: `librocat` on npm is the
+  runnable MCP server again (`npx -y librocat`), not a pointer that only
+  prints an install command. Many Agent Skills- and MCP-capable
+  harnesses do not yet support the newer Agent Plugins standard, so the
+  npm package is the documented fallback for them: `npx skills add
+  librocat/librocat` (skills) plus this package (the server). `npx
+  plugins add librocat/librocat` remains the recommended install where
+  supported (MCP + skills in one command).
+
 ## [0.1.2] - 2026-08-22
 
 ### Changed
@@ -74,7 +140,10 @@ change a tool argument. A patch version never does.
   `npx plugins add librocat/librocat`.
 - The OSS bundle of the Local tier (`pnpm run oss`).
 
-[Unreleased]: https://github.com/librocat/librocat/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/librocat/librocat/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/librocat/librocat/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/librocat/librocat/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/librocat/librocat/compare/v0.1.2...v2.0.0
 [0.1.2]: https://github.com/librocat/librocat/releases/tag/v0.1.2
 [0.1.1]: https://github.com/librocat/librocat/releases/tag/v0.1.1
 [0.1.0]: https://github.com/librocat/librocat/releases/tag/v0.1.0

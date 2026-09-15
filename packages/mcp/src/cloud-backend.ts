@@ -12,9 +12,14 @@
  * filesystem there): this process has a filesystem, so it walks the repo
  * locally (`planRepoConcepts`, mechanical, no model call) and writes the
  * result into the Cloud workspace with the `ingest` tool. Nothing reads
- * back from Cloud into local files — one source of truth. `reindex` has no
- * Cloud equivalent (there is no local index to rebuild) and is left
- * undefined.
+ * back from Cloud into local files — one source of truth.
+ *
+ * `reindex` is implemented too, as a documented no-op: every write already
+ * lands in Cloud's index immediately, so there is nothing to rebuild. It
+ * stays in the tool list (rather than being dropped, the way it is on a
+ * direct HTTP connection with no local process at all) so this — the
+ * recommended "same binary, a token" path — exposes the same sixteen tools
+ * as Local.
  */
 
 import * as path from "node:path";
@@ -29,7 +34,7 @@ import {
   type TermPatch,
 } from "./tools.ts";
 
-const PACKAGE_VERSION = "2.0.0";
+const PACKAGE_VERSION = "2.2.0"; // keep in sync with packages/npm/package.json
 const BATCH_SIZE = 100; // the `ingest` tool's `concepts` cap (tools.ts)
 
 /** A remote tool returned `isError`: not a business error, a protocol one. */
@@ -164,7 +169,13 @@ export function cloudBackend(url: string, token: string): Backend {
     findingAid: (opts) => call("finding_aid", opts),
     status: () => call("status", {}),
     ingestRepo,
-    // reindex: intentionally absent — there is no local index in Cloud mode.
+    reindex: async () => {
+      const st = (await call("status", {})) as { concepts?: number };
+      return {
+        indexed: st.concepts ?? 0,
+        note: "no-op in Cloud — every write already lands in the index; nothing to rebuild",
+      };
+    },
   };
 }
 
@@ -174,8 +185,9 @@ const INSTRUCTIONS =
   "read; `ingest`/`update`/`rename`/`delete` to write; `history` for a concept's revisions; " +
   "`weed_report` for what to review; `thesaurus` for the tag vocabulary; `finding_aid` for " +
   "shelf lists; `ingest_repo` to catalog a local code repo into this workspace (reads this " +
-  "machine's disk, writes to Cloud — nothing reads back). `status` reports plan, quota, index " +
-  "credits, and the live type/tag vocabulary.";
+  "machine's disk, writes to Cloud — nothing reads back). `reindex` is a no-op here — every " +
+  "write is already indexed — kept for parity with Local's tool list. `status` reports plan, " +
+  "quota, index credits, and the live type/tag vocabulary.";
 
 /** Build the stdio MCP server for Cloud mode: the shared tool table over `cloudBackend`. */
 export function buildCloudServer(url: string, token: string): McpServer {

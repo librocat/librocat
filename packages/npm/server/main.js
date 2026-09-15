@@ -50453,7 +50453,7 @@ function registerTools(server, backend) {
     server.registerTool(
       "reindex",
       {
-        description: "Rebuild the index from the OKF bundle on disk. OKF stays the source of truth."
+        description: "Local: rebuild the index from the OKF bundle on disk; OKF stays the source of truth. Cloud (over the local bridge, when a token is set): a no-op that reports the current concept count \u2014 every write already lands in the index immediately, so there is nothing to rebuild. Present in both tiers for a matching tool list."
       },
       () => run(() => reindex())
     );
@@ -50468,7 +50468,7 @@ function registerTools(server, backend) {
 }
 
 // src/cloud-backend.ts
-var PACKAGE_VERSION = "2.0.0";
+var PACKAGE_VERSION = "2.2.0";
 var BATCH_SIZE = 100;
 var RemoteError = class extends Error {
 };
@@ -50573,11 +50573,17 @@ function cloudBackend(url2, token) {
     }),
     findingAid: (opts) => call("finding_aid", opts),
     status: () => call("status", {}),
-    ingestRepo: ingestRepo2
-    // reindex: intentionally absent — there is no local index in Cloud mode.
+    ingestRepo: ingestRepo2,
+    reindex: async () => {
+      const st = await call("status", {});
+      return {
+        indexed: st.concepts ?? 0,
+        note: "no-op in Cloud \u2014 every write already lands in the index; nothing to rebuild"
+      };
+    }
   };
 }
-var INSTRUCTIONS = "librocat Cloud, reached through the local bridge: the hosted library for this workspace, over the same tools as Local. Use `search`, `get_concept`, `list`, `neighbors`, `graph` to read; `ingest`/`update`/`rename`/`delete` to write; `history` for a concept's revisions; `weed_report` for what to review; `thesaurus` for the tag vocabulary; `finding_aid` for shelf lists; `ingest_repo` to catalog a local code repo into this workspace (reads this machine's disk, writes to Cloud \u2014 nothing reads back). `status` reports plan, quota, index credits, and the live type/tag vocabulary.";
+var INSTRUCTIONS = "librocat Cloud, reached through the local bridge: the hosted library for this workspace, over the same tools as Local. Use `search`, `get_concept`, `list`, `neighbors`, `graph` to read; `ingest`/`update`/`rename`/`delete` to write; `history` for a concept's revisions; `weed_report` for what to review; `thesaurus` for the tag vocabulary; `finding_aid` for shelf lists; `ingest_repo` to catalog a local code repo into this workspace (reads this machine's disk, writes to Cloud \u2014 nothing reads back). `reindex` is a no-op here \u2014 every write is already indexed \u2014 kept for parity with Local's tool list. `status` reports plan, quota, index credits, and the live type/tag vocabulary.";
 function buildCloudServer(url2, token) {
   const server = new McpServer(
     { name: "librocat", version: "0.1.0" },
@@ -50632,18 +50638,24 @@ function resolveTier() {
 }
 
 // src/cli.ts
-var PACKAGE_VERSION2 = "2.0.0";
+var PACKAGE_VERSION2 = "2.2.0";
 var HELP = `librocat \u2014 persistent AI memory over MCP (Open Knowledge Format)
 
 Usage:
   librocat                    run the MCP server on stdio (what an agent runs)
   librocat login [token]      switch this install to Cloud: paste a workspace
-                               token from librocat.dev -> dashboard -> Connect
+                               token from librocat.dev -> dashboard -> Connect.
+                               If the workspace is empty and a local OKF
+                               bundle exists, offers to push it in the same
+                               step (never touches a workspace that already
+                               has data)
   librocat login --url <url>  log into a non-default endpoint (self-hosted dev)
+  librocat login --yes        skip the push prompt and push automatically
+  librocat login --no-push    skip the push check/prompt entirely
   librocat logout             switch back to Local (forget the stored token)
   librocat whoami             show which tier is active and why
   librocat push [dir]         upload a local OKF bundle (default ./okf) into
-                               the logged-in Cloud workspace
+                               the logged-in Cloud workspace, any time
   librocat --version          print the version
   librocat --help             show this message
 
@@ -50669,10 +50681,14 @@ async function promptToken() {
   }
 }
 async function login(args) {
-  let url2 = DEFAULT_CLOUD_URL;
+  let url2 = process.env.LIBROCAT_MCP_URL || DEFAULT_CLOUD_URL;
+  let autoYes = false;
+  let noPush = false;
   const positional = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--url") url2 = args[++i] ?? url2;
+    else if (args[i] === "--yes" || args[i] === "-y") autoYes = true;
+    else if (args[i] === "--no-push") noPush = true;
     else positional.push(args[i]);
   }
   const token = positional[0] || await promptToken();
@@ -50698,6 +50714,28 @@ async function login(args) {
   writeCredentials({ token, ...url2 === DEFAULT_CLOUD_URL ? {} : { url: url2 } });
   const plan = status.plan ? ` (${status.plan})` : "";
   console.log(`Logged in${plan}. This install now talks to Cloud \u2014 restart any running agent.`);
+  if (noPush) return;
+  if (Number(status.concepts ?? 0) > 0) return;
+  const bundle = process.env.LIBROCAT_BUNDLE || "./okf";
+  const local = loadBundle(bundle).filter((c2) => c2.id !== THESAURUS_ID);
+  if (local.length === 0) return;
+  let doPush = autoYes;
+  if (!doPush && process.stdin.isTTY) {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      const answer = await rl.question(
+        `Found ${local.length} concept(s) in ${bundle} \u2014 push them into this new workspace now? [Y/n] `
+      );
+      doPush = answer.trim() === "" || /^y/i.test(answer.trim());
+    } finally {
+      rl.close();
+    }
+  } else if (!doPush) {
+    console.log(
+      `Found ${local.length} concept(s) in ${bundle}. Run \`librocat push\` to add them, or \`librocat login --yes\` next time to push automatically.`
+    );
+  }
+  if (doPush) await pushBundle(bundle, url2, cloudBackend(url2, token));
 }
 function logout() {
   clearCredentials();
@@ -50724,22 +50762,11 @@ async function whoami() {
     console.log(`  ${exc instanceof Error ? exc.message : String(exc)}`);
   }
 }
-async function push(args) {
-  const bundle = args[0] || process.env.LIBROCAT_BUNDLE || "./okf";
-  const envToken = process.env.LIBROCAT_TOKEN;
-  const stored = envToken ? null : readCredentials();
-  const token = envToken || stored?.token;
-  if (!token) {
-    console.error("not logged in \u2014 run `librocat login` first");
-    process.exitCode = 1;
-    return;
-  }
-  const url2 = process.env.LIBROCAT_MCP_URL || stored?.url || DEFAULT_CLOUD_URL;
-  const backend = cloudBackend(url2, token);
+async function pushBundle(bundle, url2, backend) {
   const concepts = loadBundle(bundle);
   if (concepts.length === 0) {
     console.log(`No concepts found in ${bundle}.`);
-    return;
+    return { failed: 0 };
   }
   const writes = [];
   let thesaurusTerms = 0;
@@ -50773,8 +50800,22 @@ async function push(args) {
     for (const [i, r] of result.results.entries()) {
       if (!r.ok) console.log(`  failed: ${writes[i]?.id ?? "(no id)"} \u2014 ${r.error}`);
     }
-    process.exitCode = 1;
   }
+  return { failed };
+}
+async function push(args) {
+  const bundle = args[0] || process.env.LIBROCAT_BUNDLE || "./okf";
+  const envToken = process.env.LIBROCAT_TOKEN;
+  const stored = envToken ? null : readCredentials();
+  const token = envToken || stored?.token;
+  if (!token) {
+    console.error("not logged in \u2014 run `librocat login` first");
+    process.exitCode = 1;
+    return;
+  }
+  const url2 = process.env.LIBROCAT_MCP_URL || stored?.url || DEFAULT_CLOUD_URL;
+  const { failed } = await pushBundle(bundle, url2, cloudBackend(url2, token));
+  if (failed > 0) process.exitCode = 1;
 }
 async function runCli(argv) {
   const [cmd, ...rest] = argv;
