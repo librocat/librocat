@@ -39,7 +39,16 @@ beforeAll(async () => {
     new StdioClientTransport({
       command: "node",
       args: [distMain],
-      env: { ...(process.env as Record<string, string>), LIBROCAT_BUNDLE: path.join(dir, "okf") },
+      env: {
+        ...(process.env as Record<string, string>),
+        LIBROCAT_BUNDLE: path.join(dir, "okf"),
+        // Force Local regardless of the machine's own ~/.librocat/credentials.json
+        // (e.g. from a developer's own `librocat login`) or an inherited
+        // LIBROCAT_TOKEN — this suite must never silently run against a real
+        // Cloud workspace.
+        LIBROCAT_MODE: "local",
+        LIBROCAT_TOKEN: "",
+      },
     }),
   );
   expect(client.getServerVersion()?.name).toBe("librocat");

@@ -92,9 +92,18 @@ export interface Backend {
   /** Finding aids: one shelf list per directory; Local can write them as index.md. */
   findingAid(opts: { dir?: string; write?: boolean }): Maybe<unknown>;
   status(): Maybe<unknown>;
-  /** Local only: needs a filesystem. Cloud leaves it undefined. */
+  /**
+   * Needs a filesystem: Local and the Cloud-mode bridge (packages/mcp/src/
+   * cloud-backend.ts) implement it; the direct Cloud HTTP endpoint (no
+   * local process at all) leaves it undefined.
+   */
   ingestRepo?(path: string, opts: { prefix?: string }): Maybe<unknown>;
-  /** Local only: rebuilds the index from the files on disk. */
+  /**
+   * Rebuilds the index from the files on disk in Local. The Cloud-mode
+   * bridge implements it too, as a no-op (nothing to rebuild), so the two
+   * expose the same tool list; the direct Cloud HTTP endpoint leaves it
+   * undefined.
+   */
   reindex?(): Maybe<unknown>;
 }
 
@@ -408,7 +417,10 @@ export function registerTools(server: McpServer, backend: Backend | BackendFacto
       "reindex",
       {
         description:
-          "Rebuild the index from the OKF bundle on disk. OKF stays the source of truth.",
+          "Local: rebuild the index from the OKF bundle on disk; OKF stays the source of " +
+          "truth. Cloud (over the local bridge, when a token is set): a no-op that reports " +
+          "the current concept count — every write already lands in the index immediately, " +
+          "so there is nothing to rebuild. Present in both tiers for a matching tool list.",
       },
       () => run(() => reindex()),
     );

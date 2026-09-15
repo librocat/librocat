@@ -1,6 +1,6 @@
 {
   "name": "librocat",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "description": "The librocat MCP server: persistent AI memory over MCP, cataloged as Open Knowledge Format (OKF) Markdown. Zero runtime dependencies, no network, no model call. Run it directly (`npx -y librocat`) for the Skills + MCP install path, or get skills too with `npx plugins add librocat/librocat`.",
   "license": "Apache-2.0",
   "type": "module",

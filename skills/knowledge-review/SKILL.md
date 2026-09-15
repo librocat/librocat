@@ -32,8 +32,9 @@ depending on whether it is logged in, so do not assume from context. Run
    `stale`, and each weeding list — deprecated, broken links, orphans, no
    description, no tags (Cloud: also not retrieved in `days` days).
 2. Local: if `stale` is true, run `reindex` (OKF on disk is the source of
-   truth). Cloud has no `reindex` and is never stale — the workspace is the
-   source of truth.
+   truth). Cloud is never stale — the workspace is the source of truth — so
+   `reindex` there is a documented no-op; no need to call it as part of
+   this pass.
 3. For each broken link, either create the missing concept or fix the link with
    `update`. A `graph` of a central concept shows where edges are thin.
 

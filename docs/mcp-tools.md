@@ -3,7 +3,9 @@
 The agent-facing interface, defined once in `packages/mcp/src/tools.ts` and
 registered by both tiers. The Local server resolves its bundle from
 `LIBROCAT_BUNDLE`; the Cloud endpoint (`https://librocat.dev/mcp`) resolves
-its workspace from the bearer token. Both are stateless.
+its workspace from the bearer token. Both are stateless. The `librocat`
+binary can also reach Cloud as a local bridge (a token, same MCP config as
+Local) — see the "Cloud bridge" note below the table.
 
 | Tool | Purpose | Key arguments | Tier |
 |------|---------|---------------|------|
@@ -20,8 +22,8 @@ its workspace from the bearer token. Both are stateless.
 | `weed_report` | What to review: deprecated, broken links, orphans, blank records; Cloud adds circulation | `days?`, `limit?` | both |
 | `thesaurus` | Read the tag thesaurus, or set one preferred tag's `broader`/`narrower`/`use_for` | `tag?`, `broader?`, `narrower?`, `use_for?`, `remove?` | both |
 | `finding_aid` | One shelf list per directory; Local can write them as `index.md` | `dir?`, `write?` | both |
-| `ingest_repo` | Ingest a code repo into concepts | `path`, `prefix?` | Local only |
-| `reindex` | Rebuild the index from OKF files | — | Local only |
+| `ingest_repo` | Ingest a code repo into concepts | `path`, `prefix?` | Local + Cloud bridge |
+| `reindex` | Rebuild the index from OKF files (Cloud bridge: a no-op) | — | Local + Cloud bridge |
 | `status` | Backend, counts, type/tag vocabulary, link health, freshness (Local), plan/quota/index credits and `review_shelf` (Libro's open proposals) (Cloud) | — | both |
 
 ## Notes
@@ -54,6 +56,13 @@ its workspace from the bearer token. Both are stateless.
   it extracts symbols with regexes and a code excerpt. JS/TS relative imports
   that resolve to other ingested files become cross-links. Set
   `LIBROCAT_INGEST_ROOT` to confine the `path` argument to that directory.
+- **"Cloud bridge"** means the `librocat` binary run with a workspace token
+  (`LIBROCAT_TOKEN`, or `librocat login`) — the same process and MCP config
+  as Local, still with a filesystem, acting as a client of the Cloud
+  endpoint. It exposes the full 16-tool surface, matching Local exactly. A
+  *direct* HTTP connection to `https://librocat.dev/mcp` (no local process
+  at all) has no filesystem, so it drops both `ingest_repo` and `reindex` —
+  14 tools.
 - **Lifecycle `status`** is `draft`, `stable` (default), or `deprecated`.
   `ingest` and `update` take it; anything else is refused before the tool
   runs. `search` and `list` filter on it.

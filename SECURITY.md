@@ -39,7 +39,8 @@ security fixes.
   else. It still makes no model call itself — Cloud's automatic indexation
   runs server-side, not in this process. `ingest_repo` still reads the local
   filesystem in this mode (the same `LIBROCAT_INGEST_ROOT` limit applies);
-  `reindex` has no meaning against Cloud and is dropped from the tool list.
+  `reindex` stays in the tool list too, as a documented no-op (Cloud has no
+  local index to rebuild), so this mode matches Local's tool count exactly.
   A rejected token surfaces as a `{"error": ...}` tool result, not a crash.
 - The published package has zero runtime dependencies. esbuild bundles it
   (including the official MCP TypeScript SDK's client, used only for the

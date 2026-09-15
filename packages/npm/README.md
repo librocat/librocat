@@ -50,12 +50,14 @@ with a revision on every write.
 Upgrading does not change your MCP config. This same binary is the Cloud
 client too — add a workspace token (from the dashboard's Connect page) as
 `LIBROCAT_TOKEN`, or run `librocat login` and paste it in, and it switches to
-Cloud on its next start: 14 tools served from your workspace instead of the
-local bundle, plus `ingest_repo` (it still reads this machine's disk, now
-writing into Cloud). `librocat logout` switches back. `librocat push [dir]`
-uploads an existing local OKF bundle into the logged-in workspace once —
-nothing is lost moving from Local to Cloud. Restart your agent after logging
-in or out; most agents cache the tool list at startup.
+Cloud on its next start: the same 16 tools, served from your workspace
+instead of the local bundle (`ingest_repo` still reads this machine's disk,
+now writing into Cloud; `reindex` becomes a no-op, since Cloud has no local
+index to rebuild). `librocat logout` switches back. `librocat login` also
+offers to push an existing local library into a freshly-empty workspace in
+the same step, or run `librocat push [dir]` yourself any time — nothing is
+lost moving from Local to Cloud. Restart your agent after logging in or
+out; most agents cache the tool list at startup.
 
 - Repository: https://github.com/librocat/librocat
 - Site: https://librocat.dev

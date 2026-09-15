@@ -91,11 +91,13 @@ the hosted remote endpoint, for clients that speak remote MCP with headers:
 }
 ```
 
-The tool surface is the same across all three, minus `reindex` in Cloud
-(there is no local index to rebuild there). The remote HTTP form above also
-drops `ingest_repo` — Cloud's endpoint has no filesystem — but the stdio
-forms keep it: the local process reads the repo path and writes the result
-into the Cloud workspace. Cloud adds automatic LLM indexation paid with
+The two stdio forms (a token in `mcp.json`'s `env`, or `librocat login`)
+expose the full sixteen-tool surface, matching Local exactly: the local
+process still has a filesystem, so `ingest_repo` reads a repo path and
+writes the result into the Cloud workspace, and `reindex` stays too, as a
+documented no-op (there is no local index to rebuild against Cloud). Only
+the remote HTTP form above drops both — that endpoint has no filesystem at
+all — for fourteen tools. Cloud adds automatic LLM indexation paid with
 index credits.
 
 ## For plugin authors: use librocat as your plugin's memory
