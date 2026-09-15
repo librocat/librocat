@@ -27,33 +27,64 @@ write. Watch [librocat.dev](https://librocat.dev).
 ## Use it
 
 librocat is an **Agent Plugin**: the MCP server plus the Agent Skills, and
-this repo root is the plugin. Install it into every agent you have — Claude
-Code, Cursor, Codex, VS Code, and others — with one command (the
-[plugins CLI](https://www.npmjs.com/package/plugins)):
+this repo root is the plugin. Two install paths reach the same result —
+pick the one your agent supports.
+
+### Option A — the Agent Plugin (recommended)
+
+One command installs the MCP server and the Agent Skills together, into
+every agent you have — Claude Code, Cursor, Codex, VS Code, and others —
+with the [plugins CLI](https://www.npmjs.com/package/plugins):
 
 ```bash
 npx plugins add librocat/librocat
 ```
 
 The plugin carries its own built server (`server/main.js`, zero
-dependencies, Node 20+), so the install downloads nothing from npm (the npm
-package `librocat` is a pointer that names the command above). To add
-just the MCP server to one client by hand, from a clone of this repo:
+dependencies, Node 20+), so the install downloads nothing else from npm.
+Any runner works the same way — `npx`, `pnpm dlx`, `yarn dlx`, or
+`bunx`.
+
+### Option B — Skills + MCP, separately
+
+Some agents don't yet support [Agent Plugins](https://agent-plugins.org)
+but do support the two older, more widely adopted standards it's built
+from: [Agent Skills](https://agentskills.io) (40+ clients) and
+[MCP](https://github.com/modelcontextprotocol/typescript-sdk) (nearly
+universal). Install both — the skills instruct the agent to call this
+server's tools, so skills alone do nothing and the server alone works
+without the cataloging guidance:
+
+```bash
+npx skills add librocat/librocat
+```
+([skills CLI](https://github.com/vercel-labs/skills))
+
+```json
+{ "mcpServers": { "librocat": { "command": "npx", "args": ["-y", "librocat"], "env": { "LIBROCAT_BUNDLE": "./okf" } } } }
+```
+
+The npm package `librocat` is the server itself (`npx -y librocat` runs
+it directly, zero dependencies). To run from a clone instead:
 
 ```json
 { "mcpServers": { "librocat": { "command": "node", "args": ["<clone>/server/main.js"] } } }
 ```
 
-Any runner runs the plugins CLI — `npx`, `pnpm dlx`, `yarn dlx`,
-or `bunx`. Skills alone:
-`npx skills add librocat/librocat`
-([skills CLI](https://github.com/vercel-labs/skills)).
-
 Set `LIBROCAT_BUNDLE` to your OKF directory (default `./okf`). See
 [docs/local.md](./docs/local.md).
 
-The server runs on Node 20 or later and has zero runtime dependencies. It
-opens no network connection, makes no model call, and sends no telemetry: the
+Same binary, same MCP config, for [librocat Cloud](https://librocat.dev)
+too: `npx -y librocat login` and paste a workspace token from the
+dashboard's Connect page, and this process becomes the Cloud client on its
+next start instead — no config to rewrite. `logout`, `whoami`, and
+`push` (upload a local OKF bundle into the logged-in workspace once) round
+out the CLI. Cloud's own code is not in this repository; `login` only
+teaches this binary to talk to it.
+
+The server runs on Node 20 or later and has zero runtime dependencies. With
+no token it opens no network connection, makes no model call, and sends no
+telemetry; with a token it opens exactly one, to your Cloud workspace. The
 agent that calls it is the AI. See [SECURITY.md](./SECURITY.md).
 
 ## Develop
@@ -78,6 +109,8 @@ mcp.json        .plugin/plugin.json + .mcp.json mirror it for the plugins CLI)
 skills/         Agent Skills (agentskills.io)
 packages/core   OKF read/write + the in-memory Orama index + the Service
 packages/mcp    the librocat MCP server (official MCP TypeScript SDK, stdio)
+packages/npm    the npm package `librocat`: `server/main.js` (the same
+                bundle as above) as its `bin`
 plugin/         manifest sources for the plugin build (agent-plugins.org)
 examples/       an example OKF bundle
 docs/           Local-tier guides

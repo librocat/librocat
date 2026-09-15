@@ -1,0 +1,43 @@
+{
+  "name": "librocat",
+  "version": "2.0.0",
+  "description": "The librocat MCP server: persistent AI memory over MCP, cataloged as Open Knowledge Format (OKF) Markdown. Zero runtime dependencies, no network, no model call. Run it directly (`npx -y librocat`) for the Skills + MCP install path, or get skills too with `npx plugins add librocat/librocat`.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/librocat/librocat.git"
+  },
+  "homepage": "https://librocat.dev",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "ai-memory",
+    "memory",
+    "okf",
+    "open-knowledge-format",
+    "library-science",
+    "agent-plugin",
+    "agent-skills",
+    "notes",
+    "markdown"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "server/main.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "librocat": "server/main.js"
+  },
+  "mcpName": "io.github.librocat/librocat",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@librocat/server": "workspace:*"
+  }
+}

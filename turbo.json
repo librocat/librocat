@@ -5,6 +5,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "librocat#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["server/**"]
+    },
     "test": {
       "dependsOn": ["^build"]
     },

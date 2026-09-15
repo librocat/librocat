@@ -112,23 +112,34 @@ export function writeConcept(
   return concept;
 }
 
+/** One planned "Code File" concept, before it is written anywhere. */
+export interface PlannedConcept {
+  id: string;
+  type: "Code File";
+  title: string;
+  description: string;
+  body: string;
+  tags: string[];
+  /** Local-only frontmatter (resource path, language); not part of the MCP `ingest` shape. */
+  extra: Record<string, unknown>;
+}
+
 /**
- * Walk a code repo and write one OKF concept per source file.
+ * Walk a code repo and plan one OKF concept per source file, without writing
+ * anything. `prefix` namespaces the generated concept ids (default
+ * `code/...`). JS/TS imports that resolve to other ingested files become
+ * cross-links, so the graph tools work on the result.
  *
- * `prefix` namespaces the generated concept ids (default `code/...`). Returns
- * the concepts written. JS/TS imports that resolve to other ingested files
- * become cross-links, so the graph tools work on the result.
+ * Pure read of `repo`; the caller decides where the concepts land — a local
+ * bundle (`ingestRepo`, below) or a Cloud workspace over the `ingest` tool
+ * (the Cloud-mode bridge in `packages/mcp/src/cloud-backend.ts`).
  */
-export async function ingestRepo(
-  bundle: string,
-  repo: string,
-  opts: { prefix?: string } = {},
-): Promise<Concept[]> {
+export function planRepoConcepts(repo: string, opts: { prefix?: string } = {}): PlannedConcept[] {
   const prefix = opts.prefix ?? "code";
   const root = path.resolve(repo);
   const files = sourceFiles(root);
   const relSet = new Set(files.map((f) => toPosix(path.relative(root, f))));
-  const out: Concept[] = [];
+  const out: PlannedConcept[] = [];
   for (const file of files) {
     let text: string;
     try {
@@ -138,21 +149,41 @@ export async function ingestRepo(
     }
     const rel = toPosix(path.relative(root, file));
     const lang = LANG_BY_EXT[path.extname(file).toLowerCase()] ?? "text";
-    const cid = `${prefix}/${rel}`;
     const symbols = extractSymbols(text);
     const links = extractImportLinks(text, rel, relSet, prefix);
-    const description = `${lang} source file ${rel}`;
-    const concept = writeConcept(bundle, cid, {
+    out.push({
+      id: `${prefix}/${rel}`,
       type: "Code File",
       title: rel,
-      description,
+      description: `${lang} source file ${rel}`,
       body: renderBody(rel, lang, symbols, text, links),
       tags: [lang, "code"],
       extra: { resource: rel, language: lang },
     });
-    out.push(concept);
   }
   return out;
+}
+
+/**
+ * Walk a code repo and write one OKF concept per source file into `bundle`.
+ * Returns the concepts written. See `planRepoConcepts` for the pure walk.
+ */
+export async function ingestRepo(
+  bundle: string,
+  repo: string,
+  opts: { prefix?: string } = {},
+): Promise<Concept[]> {
+  const planned = planRepoConcepts(repo, opts);
+  return planned.map((p) =>
+    writeConcept(bundle, p.id, {
+      type: p.type,
+      title: p.title,
+      description: p.description,
+      body: p.body,
+      tags: p.tags,
+      extra: p.extra,
+    }),
+  );
 }
 
 function toPosix(p: string): string {

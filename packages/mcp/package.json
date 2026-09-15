@@ -2,7 +2,7 @@
   "name": "@librocat/server",
   "private": true,
   "version": "0.1.2",
-  "description": "The librocat MCP server (internal). The built bundle ships inside the Agent Plugin repo as server/main.js. The npm package `librocat` is a pointer with no code.",
+  "description": "The librocat MCP server (internal). The built bundle ships inside the Agent Plugin repo as server/main.js and inside the npm package `librocat` (packages/npm) as its bin, unchanged. Tier-aware: no token is Local; a token switches the same process to the Cloud client.",
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
